@@ -1,0 +1,2 @@
+deprecated "abcdefgh"
+writeln("afsjlk");

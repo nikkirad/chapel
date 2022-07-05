@@ -719,6 +719,7 @@ typedef struct qio_channel_s {
   int64_t mark_space[MARK_INITIAL_STACK_SZ];
 
   qio_style_t style;
+  int64_t bufIoMax; // maximum single I/O to/from buffer
 } qio_channel_t;
 
 
@@ -771,12 +772,11 @@ void* qio_channel_get_plugin(qio_channel_t* ch) {
 }
 
 qioerr _qio_channel_init_buffered(qio_channel_t* ch, qio_file_t* file, qio_hint_t hints, int readable, int writeable, int64_t start, int64_t end, qio_style_t* style);
-qioerr _qio_channel_init_file(qio_channel_t* ch, qio_file_t* file, qio_hint_t hints, int readable, int writeable, int64_t start, int64_t end, qio_style_t* style);
+qioerr _qio_channel_init_file(qio_channel_t* ch, qio_file_t* file, qio_hint_t hints, int readable, int writeable, int64_t start, int64_t end, qio_style_t* style, int64_t bufIoMax);
 
 
 // maybe want to use INT64_MAX for end if it's not to be restricted.
-qioerr qio_channel_create(qio_channel_t** ch_out, qio_file_t* file, qio_hint_t hints, int readable, int writeable, int64_t start, int64_t end, qio_style_t* style);
-
+qioerr qio_channel_create(qio_channel_t** ch_out, qio_file_t* file, qio_hint_t hints, int readable, int writeable, int64_t start, int64_t end, qio_style_t* style, int64_t bufIoMax);
 
 qioerr qio_relative_path(const char** path_out, const char* cwd, const char* path);
 qioerr qio_shortest_path(qio_file_t* file, const char** path_out, const char* path_in);
@@ -879,6 +879,7 @@ int32_t qio_channel_read_byte(const int threadsafe, qio_channel_t* restrict ch)
     uint8_t tmp;
     err = _qio_slow_read(ch, &tmp, 1, &amt_read);
     if( err == 0 && amt_read != 1 ) err = QIO_ESHORT;
+
     if( err == 0 ) ret = tmp;
     else {
       _qio_channel_set_error_unlocked(ch, err);

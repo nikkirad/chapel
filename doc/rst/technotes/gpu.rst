@@ -11,18 +11,15 @@ environments. We have tested it on systems with NVidia Tesla P100 GPUs and CUDA
 11.0 and a system with NVidia Ampere A100 GPUs with CUDA 11.6. The current
 implementation will only apply to certain ``forall`` and ``foreach`` loops.
 
-We also (currently) only support single-locale execution (i.e. Chapel must be
-compiled with ``CHPL_COMM=none``). We also require ``LLVM`` to be used as
-Chapel's backend compiler (i.e. ``CHPL_LLVM`` must be set to ``system`` or
-``bundled``). For more information about these settings see :ref:`Optional
-Settings <readme-chplenv>`.
+We also require ``LLVM`` to be used as Chapel's backend compiler (i.e.
+``CHPL_LLVM`` must be set to ``system`` or ``bundled``). For more information
+about these settings see :ref:`Optional Settings <readme-chplenv>`.
 
 Overview
 --------
 
 To deploy code to a GPU, put the relevant code in an ``on`` statement targeting
-the GPU locale (i.e. ``here.getChild(1)``). For a given locale, we represent the
-CPU(s) as sublocale 0 and GPU(s) on the system as sublocales with positive IDs.
+a GPU sublocale (i.e. ``here.gpus[0]``).
 
 Any arrays that are declared in the body of this ``on`` statement will be
 allocated into unified memory and will be accessible on the GPU. Chapel will
@@ -35,7 +32,7 @@ eligible when:
   cause any network communication". In practice, this means loops not containing
   any non-inlined function calls.
 * They are free of any call to a function that fails to meet the above
-  criteria, accesses outer variables, or is recursive.
+  criteria, accesses outer variables, or are recursive.
 
 Any non-eligible loop will be executed on the CPU.
 
@@ -61,7 +58,8 @@ there.  This may also be set using the ``CHPL_CUDA_ARCH`` environment variable.
 If you would like to view debugging information you can pass ``--verbose`` to
 your generated executable. This output will show the invocation of CUDA kernel
 calls along with various other interactions with the GPU such as memory
-operations.
+operations.  You may also use the :mod:`GPUDiagnostics` module to gather
+similar information.
 
 Example
 -------
@@ -77,7 +75,7 @@ kernels for the ``forall`` loops in the function.
   config const n = 10;
 
   writeln("on GPU:");
-  jacobi(here.getChild(1));
+  jacobi(here.gpus[0]);
   writeln("on CPU:");
   jacobi(here);
 
@@ -97,3 +95,26 @@ kernels for the ``forall`` loops in the function.
   }
 
 
+Multi-Locale Support
+--------------------
+
+As of Chapel 1.27.0 the GPU locale model may be used alongside communication
+layers (values of ``CHPL_COMM``) other than ``none``. This enables programs to
+use GPUs across nodes.
+
+In this mode, normal remote access is supported outside of loops that are
+offloaded to the GPU; however, remote access within a kernel is not supported.
+An idiomatic way to use all GPUs available across locales is with nested
+``coforall`` loops like the following:
+
+.. code-block:: chapel
+
+  coforall loc in Locales do on loc {
+    coforall gpu in here.gpus do on gpu {
+      forall {
+        // ...
+      }
+    }
+  }
+
+For more examples see the tests under ``test/gpu/native/multiLocale``.

@@ -87,9 +87,13 @@ module Map {
        than 50% full. The acceptable values for this argument are
        between 0 and 1, exclusive, meaning (0,1). This is useful
        when you would like to reduce memory impact or potentially
-       speed up how fast the map finds a slot.
+       speed up how fast the map finds a slot. To override the
+       default value of 0.5, the `defaultHashTableResizeThreshold`
+       config flag can be set at runtime. Note that this default
+       affects all hash-based data structures, including
+       associative domains and sets.
     */
-    const resizeThreshold = 0.5;
+    const resizeThreshold = defaultHashTableResizeThreshold;
 
     pragma "no doc"
     var table: chpl__hashtable(keyType, valType);
@@ -124,7 +128,8 @@ module Map {
                             attempting to resize.
     */
     proc init(type keyType, type valType, param parSafe=false,
-              resizeThreshold=0.5, initialCapacity=16) {
+              resizeThreshold=defaultHashTableResizeThreshold,
+              initialCapacity=16) {
       _checkKeyAndValType(keyType, valType);
       this.keyType = keyType;
       this.valType = valType;
@@ -141,7 +146,8 @@ module Map {
     }
 
     proc init(type keyType, type valType, param parSafe=false,
-              resizeThreshold=0.5, initialCapacity=16)
+              resizeThreshold=defaultHashTableResizeThreshold,
+              initialCapacity=16)
     where isNonNilableClass(valType) {
       _checkKeyAndValType(keyType, valType);
       this.keyType = keyType;
@@ -562,6 +568,19 @@ module Map {
     }
 
     /*
+      Reads the contents of this map from a channel. The format looks like:
+
+        .. code-block:: chapel
+
+           {k1: v1, k2: v2, .... , kn: vn}
+
+      :arg ch: A channel to read from.
+    */
+    proc readThis(ch: channel) throws {
+      _readWriteHelper(ch);
+    }
+
+    /*
       Writes the contents of this map to a channel. The format looks like:
 
         .. code-block:: chapel
@@ -570,7 +589,12 @@ module Map {
 
       :arg ch: A channel to write to.
     */
-    proc readWriteThis(ch: channel) throws {
+    proc writeThis(ch: channel) throws {
+      _readWriteHelper(ch);
+    }
+
+    pragma "no doc"
+    proc _readWriteHelper(ch: channel) throws {
       _enter(); defer _leave();
       var first = true;
       ch <~> new ioLiteral("{");
@@ -586,6 +610,20 @@ module Map {
         }
       }
       ch <~> new ioLiteral("}");
+    }
+
+    /*
+      Writes the contents of this map to a channel. The format looks like:
+
+        .. code-block:: chapel
+
+           {k1: v1, k2: v2, .... , kn: vn}
+
+      :arg ch: A channel to write to.
+    */
+    deprecated "'readWriteThis' methods are deprecated. Use 'readThis' and 'writeThis' methods instead."
+    proc readWriteThis(ch: channel) throws {
+      _readWriteHelper(ch);
     }
 
     /*
@@ -816,6 +854,7 @@ module Map {
   }
 
   /* Returns a new map containing the keys and values in either a or b. */
+  deprecated "The `+` operator has been deprecated for map"
   operator map.+(a: map(?keyType, ?valueType, ?),
                  b: map(keyType, valueType, ?)) {
     return a | b;
@@ -825,12 +864,14 @@ module Map {
     Sets the left-hand side map to contain the keys and values in either
     a or b.
    */
+  deprecated "The `+=` operator has been deprecated for map"
   operator map.+=(ref a: map(?keyType, ?valueType, ?),
                   b: map(keyType, valueType, ?)) {
     a |= b;
   }
 
   /* Returns a new map containing the keys and values in either a or b. */
+  deprecated "The `|` operator has been deprecated for map"
   operator map.|(a: map(?keyType, ?valueType, ?),
                  b: map(keyType, valueType, ?)) {
     var newMap = new map(keyType, valueType, (a.parSafe || b.parSafe));
@@ -843,6 +884,7 @@ module Map {
   /* Sets the left-hand side map to contain the keys and values in either
      a or b.
    */
+  deprecated "The `|=` operator has been deprecated for map"
   operator map.|=(ref a: map(?keyType, ?valueType, ?),
                   b: map(keyType, valueType, ?)) {
     // add keys/values from b to a if they weren't already in a
@@ -850,6 +892,7 @@ module Map {
   }
 
   /* Returns a new map containing the keys that are in both a and b. */
+  deprecated "The `&` operator has been deprecated for map"
   operator map.&(a: map(?keyType, ?valueType, ?),
                  b: map(keyType, valueType, ?)) {
     var newMap = new map(keyType, valueType, (a.parSafe || b.parSafe));
@@ -865,12 +908,14 @@ module Map {
 
   /* Sets the left-hand side map to contain the keys that are in both a and b.
    */
+  deprecated "The `&=` operator has been deprecated for map"
   operator map.&=(ref a: map(?keyType, ?valueType, ?),
                   b: map(keyType, valueType, ?)) {
     a = a & b;
   }
 
   /* Returns a new map containing the keys that are only in a, but not b. */
+  deprecated "The `-` operator has been deprecated for map"
   operator map.-(a: map(?keyType, ?valueType, ?),
                  b: map(keyType, valueType, ?)) {
     var newMap = new map(keyType, valueType, (a.parSafe || b.parSafe));
@@ -887,6 +932,7 @@ module Map {
 
   /* Sets the left-hand side map to contain the keys that are in the
      left-hand map, but not the right-hand map. */
+  deprecated "The `-=` operator has been deprecated for map"
   operator map.-=(ref a: map(?keyType, ?valueType, ?),
                   b: map(keyType, valueType, ?)) {
     a._enter(); defer a._leave();
@@ -904,6 +950,7 @@ module Map {
 
   /* Returns a new map containing the keys that are in either a or b, but
      not both. */
+  deprecated "The `^` operator has been deprecated for map"
   operator map.^(a: map(?keyType, ?valueType, ?),
                  b: map(keyType, valueType, ?)) {
     var newMap = new map(keyType, valueType, (a.parSafe || b.parSafe));
@@ -921,6 +968,7 @@ module Map {
 
   /* Sets the left-hand side map to contain the keys that are in either the
      left-hand map or the right-hand map, but not both. */
+  deprecated "The `^=` operator has been deprecated for map"
   operator map.^=(ref a: map(?keyType, ?valueType, ?),
                   b: map(keyType, valueType, ?)) {
     try! {

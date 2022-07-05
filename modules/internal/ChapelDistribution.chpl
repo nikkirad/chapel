@@ -194,19 +194,16 @@ module ChapelDistribution {
     }
 
     pragma "no doc" pragma "last resort"
-    proc parSafe                  { dnsError("parSafe"); }
-
-    pragma "no doc" pragma "last resort"
     proc dsiLow                   { dnsError("low"); }
 
     pragma "no doc" pragma "last resort"
     proc dsiHigh                  { dnsError("high"); }
 
     pragma "no doc" pragma "last resort"
-    proc dsiAlignedlow            { dnsError("alignedLow"); }
+    proc dsiAlignedLow            { dnsError("alignedLow"); }
 
     pragma "no doc" pragma "last resort"
-    proc dsiAlignedhigh           { dnsError("alignedHigh"); }
+    proc dsiAlignedHigh           { dnsError("alignedHigh"); }
 
     pragma "no doc" pragma "last resort"
     proc dsiFirst                 { dnsError("first"); }
@@ -507,7 +504,7 @@ module ChapelDistribution {
 
     inline proc _countDuplicates(arr) where isArray(arr) {
       var dupCount = -1;
-      var prev = arr[arr.domain.low];
+      var prev = arr[arr.domain.lowBound];
       for a in arr {
         if a == prev then
           dupCount += 1;
@@ -532,8 +529,8 @@ module ChapelDistribution {
 
         //check duplicates assuming sorted
         if isUnique {
-          const indsStart = inds.domain.low;
-          const indsEnd = inds.domain.high;
+          const indsStart = inds.domain.lowBound;
+          const indsEnd = inds.domain.highBound;
           var lastInd = inds[indsStart];
           for i in indsStart+1..indsEnd {
             if inds[i] == lastInd then
@@ -563,8 +560,8 @@ module ChapelDistribution {
 
       //eliminate duplicates --assumes sorted
       if !isUnique {
-        //make sure lastInd != inds[inds.domain.low]
-        var lastInd = inds[inds.domain.low] + 1;
+        //make sure lastInd != inds[inds.domain.lowBound]
+        var lastInd = inds[inds.domain.lowBound] + 1;
         for (i, p) in zip(inds, indivInsertPts)  {
           if i == lastInd then p = -1;
           else lastInd = i;
@@ -692,22 +689,22 @@ module ChapelDistribution {
     proc dsiDims() { return parentDom.dims(); }
     proc dsiNumIndices { return getNNZ(); }
     proc dsiSize { return getNNZ(); }
-    proc dsiLow { return parentDom.low; }
-    proc dsiHigh { return parentDom.high; }
-    proc dsiStride { return parentDom.stride; }
-    proc dsiAlignment { return parentDom.alignment; }
-    proc dsiFirst {
+    override proc dsiLow { return parentDom.lowBound; }
+    override proc dsiHigh { return parentDom.highBound; }
+    override proc dsiStride { return parentDom.stride; }
+    override proc dsiAlignment { return parentDom.alignment; }
+    override proc dsiFirst {
       halt("dsiFirst is not implemented");
       const _tmp: rank*idxType;
       return _tmp;
     }
-    proc dsiLast {
+    override proc dsiLast {
       halt("dsiLast not implemented");
       const _tmp: rank*idxType;
       return _tmp;
     }
-    proc dsiAlignedLow { return parentDom.alignedLow; }
-    proc dsiAlignedHigh { return parentDom.alignedHigh; }
+    override proc dsiAlignedLow { return parentDom.alignedLow; }
+    override proc dsiAlignedHigh { return parentDom.alignedHigh; }
 
     override proc dsiMakeIndexBuffer(size) {
       return new SparseIndexBuffer(rank=this.rank, obj=this, size=size);
@@ -936,10 +933,6 @@ module ChapelDistribution {
         chpl_decRefCountsForDomainsInArrayEltTypes(_to_unmanaged(this), eltType);
       }
     }
-
-    proc rank param {
-      return 1;
-    }
   }
 
   /* BaseArrOverRectangularDom has this signature so that dsiReallocate
@@ -1084,7 +1077,7 @@ module ChapelDistribution {
       var prevNewIdx = 0;
 
       // fill all new indices i s.t. i > indices[oldnnz]
-      forall i in shiftMap.domain.high+1..dom.nnzDom.high do data[i] = irv;
+      forall i in shiftMap.domain.highBound+1..dom.nnzDom.highBound do data[i] = irv;
 
       for (i, _newIdx) in zip(0..#oldnnz by -1, shiftMap.domain.dim(0) by -1) {
         newIdx = shiftMap[_newIdx];
@@ -1106,7 +1099,7 @@ module ChapelDistribution {
       for i in shiftrange by -1 {
         data(i+1) = data(i);
       }
-      data(shiftrange.low) = irv;
+      data(shiftrange.lowBound) = irv;
     }
 
     override proc sparseShiftArrayBack(shiftrange) {

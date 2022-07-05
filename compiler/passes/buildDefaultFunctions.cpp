@@ -470,8 +470,10 @@ FnSymbol* build_accessor(AggregateType* ct, Symbol* field,
   fn->setMethod(true);
 
   Type* thisType = ct;
+
   if (chapelClass && (typeMethod || typeOrParam))
     thisType = ct->getDecoratedClass(ClassTypeDecorator::GENERIC);
+
   ArgSymbol* _this = new ArgSymbol(INTENT_BLANK, "this", thisType);
 
   if (typeMethod) {
@@ -1825,7 +1827,10 @@ static void buildDefaultReadWriteFunctions(AggregateType* ct) {
     return;
 
   // If we have a readWriteThis, we'll call it from readThis/writeThis.
-  if (functionExists("readWriteThis", dtMethodToken, ct, dtAny)) {
+  if (FnSymbol* fn = functionExists("readWriteThis", dtMethodToken, ct, dtAny)) {
+    if (fn->hasFlag(FLAG_DEPRECATED) == false) {
+      USR_WARN(fn, "'readWriteThis' methods are deprecated. Use 'readThis' and 'writeThis' methods instead.");
+    }
     hasReadWriteThis = true;
   }
 

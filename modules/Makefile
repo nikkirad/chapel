@@ -76,7 +76,6 @@ MODULES_TO_DOCUMENT = \
 	standard/ChplConfig.chpl \
 	standard/CommDiagnostics.chpl \
 	standard/GPUDiagnostics.chpl \
-	standard/CPtr.chpl \
 	standard/CTypes.chpl \
 	standard/DateTime.chpl \
 	standard/DynamicIters.chpl \
@@ -102,7 +101,6 @@ MODULES_TO_DOCUMENT = \
 	standard/Subprocess.chpl \
 	standard/Sys.chpl \
 	standard/SysBasic.chpl \
-	standard/SysCTypes.chpl \
 	standard/SysError.chpl \
 	standard/Time.chpl \
 	standard/Types.chpl \

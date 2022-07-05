@@ -304,17 +304,17 @@ module ArrayViewReindex {
     // These would be forwarded to 'updom' automatically,
     // except the "last resort" overloads BaseDom take precedence
     // over forwarding. So, define these explicitly.
-    proc parSafe return updom.parSafe;
-    proc dsiLow return updom.dsiLow;
-    proc dsiHigh return updom.dsiHigh;
-    proc dsiStride return updom.dsiStride;
-    proc dsiAlignment return updom.dsiAlignment;
-    proc dsiFirst return updom.dsiFirst;
-    proc dsiLast return updom.dsiLast;
-    proc dsiAlignedlow return updom.dsiAlignedlow;
-    proc dsiAlignedhigh return updom.dsiAlignedhigh;
-    proc dsiIndexOrder return updom.dsiIndexOrder;
-    proc dsiMakeIndexBuffer return updom.dsiMakeIndexBuffer;
+    proc parSafe param return updom.parSafe;
+    override proc dsiLow return updom.dsiLow;
+    override proc dsiHigh return updom.dsiHigh;
+    override proc dsiStride return updom.dsiStride;
+    override proc dsiAlignment return updom.dsiAlignment;
+    override proc dsiFirst return updom.dsiFirst;
+    override proc dsiLast return updom.dsiLast;
+    override proc dsiAlignedLow return updom.dsiAlignedLow;
+    override proc dsiAlignedHigh return updom.dsiAlignedHigh;
+    override proc dsiIndexOrder(i) return updom.dsiIndexOrder(i);
+    override proc dsiMakeIndexBuffer(size) return updom.dsiMakeIndexBuffer(size);
 
     // Don't want to privatize a DefaultRectangular, so pass the query on to
     // the wrapped array
@@ -743,8 +743,8 @@ module ArrayViewReindex {
     var actualLow, actualHigh: downdom.rank*downdom.idxType;
     for param d in 0..dims.size-1 {
       if (dims(d).sizeAs(int) == 0) {
-        actualLow(d) = downdom.dsiDim(d).low;
-        actualHigh(d) = downdom.dsiDim(d).high;
+        actualLow(d) = downdom.dsiDim(d).lowBound;
+        actualHigh(d) = downdom.dsiDim(d).highBound;
       } else {
         actualLow(d) = chpl_reindexConvertIdxDim(dims(d).first, updom, downdom, d);
         actualHigh(d) = chpl_reindexConvertIdxDim(dims(d).last, updom, downdom, d);
@@ -775,8 +775,8 @@ module ArrayViewReindex {
     var actualLow, actualHigh: downdom.rank*downdom.idxType;
     for param d in 0..dims.size-1 {
       if (dims(d).sizeAs(int) == 0) {
-        actualLow(d) = downdom.dsiDim(d).low;
-        actualHigh(d) = downdom.dsiDim(d).high;
+        actualLow(d) = downdom.dsiDim(d).lowBound;
+        actualHigh(d) = downdom.dsiDim(d).highBound;
       } else {
         actualLow(d) = chpl_reindexConvertIdxDim(dims(d).first, updom, downdom, d);
         actualHigh(d) = chpl_reindexConvertIdxDim(dims(d).last, updom, downdom, d);

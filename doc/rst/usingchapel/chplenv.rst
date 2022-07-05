@@ -37,7 +37,7 @@ CHPL_HOME
 
     .. code-block:: sh
 
-        export CHPL_HOME=~/chapel-1.26.0
+        export CHPL_HOME=~/chapel-1.27.0
 
    .. note::
      This, and all other examples in the Chapel documentation, assumes you're
@@ -102,7 +102,6 @@ CHPL_HOST_PLATFORM
         netbsd32     32-bit NetBSD platforms
         netbsd64     64-bit NetBSD platforms
         pwr6         IBM Power6 SMP cluster
-        sunos        SunOS platforms
         cray-cs      Cray CS\ |trade|
         cray-xc      Cray XC\ |trade|
         hpe-cray-ex  HPE Cray EX
@@ -825,7 +824,8 @@ CHPL_LIB_PIC
        Value Description
        ===== ================================
        pic   build position independent code
-       none  build position dependent code
+       none  use the system default, which might be
+             position independent or position dependent
        ===== ================================
 
    If unset, ``CHPL_LIB_PIC`` defaults to ``none``

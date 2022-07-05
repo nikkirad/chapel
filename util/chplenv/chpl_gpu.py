@@ -1,7 +1,8 @@
 import utils
 import os
+import glob
 import chpl_locale_model
-from utils import error
+from utils import error, memoize
 
 def get():
     if chpl_locale_model.get() == 'gpu':
@@ -9,6 +10,7 @@ def get():
     else:
         return 'none'
 
+@memoize
 def get_cuda_path():
     chpl_cuda_path = os.environ.get("CHPL_CUDA_PATH")
     if chpl_cuda_path:
@@ -23,8 +25,19 @@ def get_cuda_path():
     else:
         return ""
 
+def get_cuda_libdevice_path():
+    chpl_cuda_path = get_cuda_path()
+
+    # there can be multiple libdevices for multiple compute architectures. Not
+    # sure how realistic that is, nor I see multiple instances in the systems I
+    # have access to. They are always named `libdevice.10.bc`, but I just want
+    # to be sure here.
+    libdevices = glob.glob(chpl_cuda_path+"/nvvm/libdevice/libdevice*.bc")
+    if len(libdevices) == 0:
+        return ""
+    else:
+        return libdevices[0]
+
+
 def validate(chplLocaleModel, chplComm):
-    validModels = ["none", "gasnet"]
-    if chplLocaleModel == 'gpu' and chplComm not in validModels:
-      error("The prototype GPU support does not work when CHPL_COMM is not set to one of:\n\t%s." %
-         ", ".join(validModels))
+    pass

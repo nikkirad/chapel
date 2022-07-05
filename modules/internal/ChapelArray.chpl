@@ -791,8 +791,12 @@ module ChapelArray {
 
     proc idxToLocale(ind) return _value.dsiIndexToLocale(ind);
 
-    proc readWriteThis(f) throws {
-      f <~> _value;
+    proc readThis(f) throws {
+      f.read(_value);
+    }
+
+    proc writeThis(f) throws {
+      f.write(_value);
     }
 
     proc displayRepresentation() { _value.dsiDisplayRepresentation(); }
@@ -1700,12 +1704,7 @@ module ChapelArray {
       if boundsChecking && isEmpty() then
         halt("last called on an empty array");
 
-      return this(this.domain.high);
-    }
-
-    deprecated "Array back() method is deprecated; use :proc:`last` instead"
-    proc back() {
-      return this.last;
+      return this(this.domain.last);
     }
 
     /* Return the first element in the array. The array must be a
@@ -1718,21 +1717,16 @@ module ChapelArray {
       if boundsChecking && isEmpty() then
         halt("first called on an empty array");
 
-      return this(this.domain.low);
-    }
-
-    deprecated "Array front() method is deprecated; use :proc:`first` instead"
-    proc front() {
-      return this.first;
+      return this(this.domain.first);
     }
 
     /* Reverse the order of the values in the array. */
     proc reverse() {
       if (!chpl__isDense1DArray()) then
         compilerError("reverse() is only supported on dense 1D arrays");
-      const lo = this.domain.low,
+      const lo = this.domain.alignedLow,
             mid = this.domain.sizeAs(this.idxType) / 2,
-            hi = this.domain.high;
+            hi = this.domain.alignedHigh;
       for i in 0..#mid {
         this[lo + i] <=> this[hi - i];
       }
@@ -1886,6 +1880,8 @@ module ChapelArray {
      equal to the corresponding element in ``that``. Otherwise
      return false. */
   proc _array.equals(that: _array): bool {
+    if chpl_warnUnstable then compilerWarning("the 'Array.equals()' method is unstable");
+
     //
     // quick path for identical arrays
     //
@@ -2337,7 +2333,7 @@ module ChapelArray {
 
      // TODO can we omit the following check and bulk transfer narrow
      // pointers, too
-    if __primitive("is wide pointer", a[aDom.low]) {
+    if __primitive("is wide pointer", a[aDom.alignedLow]) {
       return chpl__bulkTransferArray(a, aDom, b, bDom);
     }
     return false;

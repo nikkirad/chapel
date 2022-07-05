@@ -31,6 +31,12 @@
 namespace chpl {
 
 
+// forward declare AstNode
+namespace uast {
+  class AstNode;
+}
+
+
 /**
   This class represents an error/warning message. The message
   is saved (in the event it needs to be reported again).
@@ -45,10 +51,15 @@ class ErrorMessage final {
   };
 
  private:
+  bool isDefaultConstructed_;
   Kind kind_;
-  Location location_;
-  std::string message_;
+  // if id_ is set, it is used instead of location_
   ID id_;
+  // location_ should only be used if id_ is empty
+  // which happens for parser errors
+  Location location_;
+
+  std::string message_;
 
   // sometimes an error message wants to point to a bunch of
   // related line numbers. That can go here.
@@ -58,33 +69,119 @@ class ErrorMessage final {
 
  public:
   ErrorMessage();
-  ErrorMessage(ID id, Location location, std::string message, Kind kind);
-  ErrorMessage(ID id, Location location, const char* message, Kind kind);
+  ErrorMessage(Kind kind, Location location, std::string message);
+  ErrorMessage(Kind kind, Location location, const char* message);
+  ErrorMessage(Kind kind, ID id, std::string message);
+  ErrorMessage(Kind kind, ID id, const char* message);
 
-  static ErrorMessage vbuild(ID id, Location loc, Kind kind,
-                             const char* fmt,
-                             va_list vl);
+  /** Build an ErrorMessage within another varargs function */
+  static ErrorMessage vbuild(Kind kind, ID id, const char* fmt, va_list vl);
 
-  static ErrorMessage build(ID id, Location loc, Kind kind,
-                            const char* fmt, ...)
+  /** Build an ErrorMessage within another varargs function */
+  static ErrorMessage vbuild(Kind kind, Location location,
+                             const char* fmt, va_list vl);
+
+
+  /** Build a note ErrorMessage from an ID and a printf-style format */
+  static ErrorMessage note(ID id, const char* fmt, ...)
 #ifndef DOXYGEN
     // docs generator has trouble with the attribute applied to 'build'
     // so the above ifndef works around the issue.
-    __attribute__ ((format (printf, 4, 5)))
+    __attribute__ ((format (printf, 2, 3)))
+#endif
+  ;
+  /** Build a note ErrorMessage from an AstNode* and a printf-style format */
+  static ErrorMessage note(const uast::AstNode* ast, const char* fmt, ...)
+#ifndef DOXYGEN
+    // docs generator has trouble with the attribute applied to 'build'
+    // so the above ifndef works around the issue.
+    __attribute__ ((format (printf, 2, 3)))
 #endif
   ;
 
+  /** Build a note ErrorMessage from a Location and a printf-style format */
+  static ErrorMessage note(Location loc, const char* fmt, ...)
+#ifndef DOXYGEN
+    // docs generator has trouble with the attribute applied to 'build'
+    // so the above ifndef works around the issue.
+    __attribute__ ((format (printf, 2, 3)))
+#endif
+  ;
+
+  /** Build a warning ErrorMessage from an ID and a printf-style format */
+  static ErrorMessage warning(ID id, const char* fmt, ...)
+#ifndef DOXYGEN
+    // docs generator has trouble with the attribute applied to 'build'
+    // so the above ifndef works around the issue.
+    __attribute__ ((format (printf, 2, 3)))
+#endif
+  ;
+
+  /** Build a warning ErrorMessage from an AstNode* and a printf-style format*/
+  static ErrorMessage warning(const uast::AstNode*, const char* fmt, ...)
+#ifndef DOXYGEN
+    // docs generator has trouble with the attribute applied to 'build'
+    // so the above ifndef works around the issue.
+    __attribute__ ((format (printf, 2, 3)))
+#endif
+  ;
+
+  /** Build a warning ErrorMessage from a Location and a printf-style format */
+  static ErrorMessage warning(Location loc, const char* fmt, ...)
+#ifndef DOXYGEN
+    // docs generator has trouble with the attribute applied to 'build'
+    // so the above ifndef works around the issue.
+    __attribute__ ((format (printf, 2, 3)))
+#endif
+  ;
+
+  /** Build an error ErrorMessage from an ID and a printf-style format */
+  static ErrorMessage error(ID id, const char* fmt, ...)
+#ifndef DOXYGEN
+    // docs generator has trouble with the attribute applied to 'build'
+    // so the above ifndef works around the issue.
+    __attribute__ ((format (printf, 2, 3)))
+#endif
+  ;
+
+  /** Build an error ErrorMessage from an AstNode* and a printf-style format */
+  static ErrorMessage error(const uast::AstNode*, const char* fmt, ...)
+#ifndef DOXYGEN
+    // docs generator has trouble with the attribute applied to 'build'
+    // so the above ifndef works around the issue.
+    __attribute__ ((format (printf, 2, 3)))
+#endif
+  ;
+
+  /** Build an error ErrorMessage from a Location and a printf-style format */
+  static ErrorMessage error(Location loc, const char* fmt, ...)
+#ifndef DOXYGEN
+    // docs generator has trouble with the attribute applied to 'build'
+    // so the above ifndef works around the issue.
+    __attribute__ ((format (printf, 2, 3)))
+#endif
+  ;
+
+  /** Add an ErrorMessage as detail information to this ErrorMessage. */
   void addDetail(ErrorMessage err);
 
+  /**
+    Returns true is this error message has no message and no details. Even
+    if the error is empty, it may still be meaningful in the case of e.g.,
+    a syntax error (where the location offers useful info).
+  */
   bool isEmpty() const { return message_.empty() && details_.empty(); }
-  Location location() const { return location_; }
 
-  UniqueString path() const { return location_.path(); }
-  int firstLine() const { return location_.firstLine(); }
-  int firstColumn() const { return location_.firstColumn(); }
-  int lastLine() const { return location_.lastLine(); }
-  int lastColumn() const { return location_.lastColumn(); }
-  int line() const { return location_.line(); }
+  /**
+    Returns true if this error message was default constructed, in
+    which case its contents are not meaningful.
+  */
+  bool isDefaultConstructed() const { return isDefaultConstructed_; }
+
+  /**
+    Return the location in the source code where this error occurred.
+  */
+  Location location(Context* context) const;
 
   const std::string& message() const { return message_; }
 
@@ -93,11 +190,12 @@ class ErrorMessage final {
   Kind kind() const { return kind_; }
 
   inline bool operator==(const ErrorMessage& other) const {
-    return kind_ == other.kind_ &&
+    return isDefaultConstructed_ == other.isDefaultConstructed_ &&
+           kind_ == other.kind_ &&
+           id_ == other.id_ &&
            location_ == other.location_ &&
            message_ == other.message_ &&
-           details_ == other.details_ &&
-           id_ == other.id_;
+           details_ == other.details_;
   }
   inline bool operator!=(const ErrorMessage& other) const {
     return !(*this == other);
@@ -106,7 +204,6 @@ class ErrorMessage final {
   void swap(ErrorMessage& other);
 
   void mark(Context* context) const;
-  void updateLocation(Context *context);
 };
 
 

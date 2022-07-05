@@ -22,7 +22,6 @@
 #include "chpl/resolution/scope-queries.h"
 #include "chpl/types/IntType.h"
 #include "chpl/types/QualifiedType.h"
-#include "chpl/types/StringType.h"
 #include "chpl/uast/Comment.h"
 #include "chpl/uast/FnCall.h"
 #include "chpl/uast/Identifier.h"
@@ -55,7 +54,7 @@ static void test1() {
                            "x;";
     setFileText(context, path, contents);
 
-    const ModuleVec& vec = parse(context, path);
+    const ModuleVec& vec = parseToplevel(context, path);
     assert(vec.size() == 1);
     const Module* m = vec[0]->toModule();
     assert(m);
@@ -88,7 +87,7 @@ static void test2() {
     std::string contents = "";
     setFileText(context, path, contents);
 
-    const ModuleVec& vec = parse(context, path);
+    const ModuleVec& vec = parseToplevel(context, path);
     assert(vec.size() == 1);
     const Module* m = vec[0]->toModule();
     assert(m);
@@ -104,7 +103,7 @@ static void test2() {
     std::string contents = "var x;";
     setFileText(context, path, contents);
 
-    const ModuleVec& vec = parse(context, path);
+    const ModuleVec& vec = parseToplevel(context, path);
     assert(vec.size() == 1);
     const Module* m = vec[0]->toModule();
     assert(m);
@@ -120,7 +119,7 @@ static void test2() {
     std::string contents = "var x: int;";
     setFileText(context, path, contents);
 
-    const ModuleVec& vec = parse(context, path);
+    const ModuleVec& vec = parseToplevel(context, path);
     assert(vec.size() == 1);
     const Module* m = vec[0]->toModule();
     assert(m);
@@ -145,7 +144,7 @@ static void test2() {
                            "x;";
     setFileText(context, path, contents);
 
-    const ModuleVec& vec = parse(context, path);
+    const ModuleVec& vec = parseToplevel(context, path);
     assert(vec.size() == 1);
     const Module* m = vec[0]->toModule();
     assert(m);
@@ -180,7 +179,7 @@ static void test3() {
                            "}\n"
                            "var y = foo(1);";
     setFileText(context, path, contents);
-    const ModuleVec& vec = parse(context, path);
+    const ModuleVec& vec = parseToplevel(context, path);
     assert(vec.size() == 1);
     const Module* m = vec[0]->toModule();
     assert(m);
@@ -210,7 +209,7 @@ static void test3() {
     context->advanceToNextRevision(true);
     std::string contents = "var y = foo(1);";
     setFileText(context, path, contents);
-    const ModuleVec& vec = parse(context, path);
+    const ModuleVec& vec = parseToplevel(context, path);
     assert(vec.size() == 1);
     const Module* m = vec[0]->toModule();
     assert(m);
@@ -257,7 +256,7 @@ static void test4() {
 
   setFileText(context, path, contents);
 
-  const ModuleVec& vec = parse(context, path);
+  const ModuleVec& vec = parseToplevel(context, path);
   assert(vec.size() == 1);
   const Module* m = vec[0]->toModule();
   assert(m);
@@ -293,7 +292,7 @@ static void test5() {
 
   setFileText(context, path, contents);
 
-  const ModuleVec& vec = parse(context, path);
+  const ModuleVec& vec = parseToplevel(context, path);
   assert(vec.size() == 1);
   const Module* m = vec[0]->toModule();
   assert(m);
@@ -336,7 +335,7 @@ static void test6() {
                            )"""";
 
     setFileText(context, path, contents);
-    const ModuleVec& vec = parse(context, path);
+    const ModuleVec& vec = parseToplevel(context, path);
     assert(vec.size() == 1);
     const Module* m = vec[0]->toModule();
     assert(m);
@@ -357,7 +356,7 @@ static void test6() {
                            )"""";
 
     setFileText(context, path, contents);
-    const ModuleVec& vec = parse(context, path);
+    const ModuleVec& vec = parseToplevel(context, path);
     assert(vec.size() == 1);
     const Module* m = vec[0]->toModule();
     assert(m);
@@ -368,6 +367,42 @@ static void test6() {
   }
 }
 
+// check a parenless function call
+static void test7() {
+  printf("test7\n");
+  Context ctx;
+  Context* context = &ctx;
+
+  auto path = UniqueString::get(context, "input.chpl");
+  std::string contents = R""""(
+                           module M {
+                             proc parenless { return 1; }
+                             parenless;
+                           }
+                        )"""";
+
+  setFileText(context, path, contents);
+
+  const ModuleVec& vec = parseToplevel(context, path);
+  assert(vec.size() == 1);
+  const Module* m = vec[0]->toModule();
+  assert(m);
+  assert(m->numStmts() == 2);
+  const Identifier* ident = m->stmt(1)->toIdentifier();
+  assert(ident);
+
+  const ResolutionResultByPostorderID& rr = resolveModule(context, m->id());
+  const ResolvedExpression& re = rr.byAst(ident);
+
+  assert(re.type().type());
+  assert(re.type().type()->isIntType());
+
+  const TypedFnSignature* fn = re.mostSpecific().only();
+  assert(fn != nullptr);
+  assert(fn->untyped()->name() == "parenless");
+  assert(fn->numFormals() == 0);
+}
+
 
 int main() {
   test1();
@@ -376,6 +411,7 @@ int main() {
   test4();
   test5();
   test6();
+  test7();
 
   return 0;
 }

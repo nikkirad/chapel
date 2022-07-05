@@ -79,9 +79,24 @@ bool hasFileText(Context* context, const std::string& path);
   This query reads a file (with the fileText query) and then parses it.
 
   Any errors encountered will be reported to the Context.
- */
-const uast::BuilderResult& parseFile(Context* context, UniqueString path);
 
+  The 'parentSymbolPath' is relevant for submodules that are in separate files
+  with 'module include'. When parsing the included module for a 'module
+  include', 'parentSymbolPath' should match the symbolPath of the ID of the
+  module containing the 'module include' statement.
+
+  When parsing a toplevel module, 'parentSymbolPath' should be "".
+ */
+const uast::BuilderResult&
+parseFileToBuilderResult(Context* context, UniqueString path,
+                         UniqueString parentSymbolPath);
+
+/**
+ Like parseFileToBuilderResult but parses whatever file contained 'id'.
+ Useful for projection queries.
+ */
+const uast::BuilderResult*
+parseFileContainingIdToBuilderResult(Context* context, ID id);
 
 /**
   A function for counting the tokens when parsing
@@ -92,7 +107,8 @@ void countTokens(Context* context, UniqueString path, ParserStats* parseStats);
 
 // These functions can't return the Location for a Comment
 // because Comments don't have IDs. If Locations for Comments are needed,
-// instead use the astToLocation field from the result of parseFile.
+// instead use the astToLocation field from the result of
+// parseFileToBuilderResult.
 
 /**
  This query returns the Location where a particular ID appeared.
@@ -109,8 +125,22 @@ const Location& locateAst(Context* context, const uast::AstNode* ast);
 using ModuleVec = std::vector<const uast::Module*>;
 /**
  This query returns a vector of parsed modules given a file path.
+
+  The 'parentSymbolPath' is relevant for submodules that are in separate files
+  with 'module include'. When parsing the included module for a 'module
+  include', 'parentSymbolPath' should match the symbolPath of the ID of the
+  module containing the 'module include' statement.
+
+  When parsing a toplevel module, 'parentSymbolPath' should be "".
+
  */
-const ModuleVec& parse(Context* context, UniqueString path);
+const ModuleVec& parse(Context* context, UniqueString path,
+                       UniqueString parentSymbolPath);
+
+/**
+ Convenience function to parse a file with parentSymbolPath="".
+ */
+const ModuleVec& parseToplevel(Context* context, UniqueString path);
 
 /**
   Return the current module search path.
@@ -189,6 +219,13 @@ bool idIsInBundledModule(Context* context, ID id);
 const uast::Module* getToplevelModule(Context* context, UniqueString name);
 
 /**
+ This query parses a submodule for 'include submodule'.
+ Returns nullptr if no such file can be found.
+ */
+const uast::Module* getIncludedSubmodule(Context* context,
+                                         ID includeModuleId);
+
+/**
  Returns the uast node with the given ID.
  */
 const uast::AstNode* idToAst(Context* context, ID id);
@@ -199,9 +236,20 @@ const uast::AstNode* idToAst(Context* context, ID id);
 uast::AstTag idToTag(Context* context, ID id);
 
 /**
+ Returns true if the ID is a parenless function.
+ */
+bool idIsParenlessFunction(Context* context, ID id);
+
+/**
  Returns the parent ID given an ID
  */
 const ID& idToParentId(Context* context, ID id);
+
+/**
+  Returns the ID for the module containing the given ID,
+  or the empty ID when given a toplevel module.
+ */
+ID idToParentModule(Context* context, ID id);
 
 /**
  Given an ID that represents a Function, get the declared return
@@ -213,7 +261,28 @@ uast::Function::ReturnIntent idToFnReturnIntent(Context* context, ID id);
  Returns 'true' if the passed ID represents a Function with a where clause,
  and 'false' otherwise.
  */
-bool functionWithIdHasWhere(Context* context, ID id);
+bool idIsFunctionWithWhere(Context* context, ID id);
+
+/**
+  Given an ID for a Variable, returns the ID of the containing
+  MultiDecl or TupleDecl, if any, and the ID of the variable otherwise.
+ */
+ID idToContainingMultiDeclId(Context* context, ID id);
+
+/**
+  Given an ID for a Record/Union/Class Decl,
+  returns 'true' if the passed name is the name of a field contained in it.
+ */
+bool idContainsFieldWithName(Context* context, ID typeDeclId,
+                             UniqueString fieldName);
+
+/**
+  Given an ID for a Record/Union/Class Decl,
+  and a field name, returns the ID for the Variable declaring that field.
+ */
+ID fieldIdWithName(Context* context, ID typeDeclId,
+                   UniqueString fieldName);
+
 
 /**
  * Store config settings that were set from the command line using -s flags

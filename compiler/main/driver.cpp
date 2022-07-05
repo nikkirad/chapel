@@ -113,6 +113,8 @@ const char* CHPL_TARGET_SYSTEM_COMPILE_ARGS = NULL;
 const char* CHPL_TARGET_BUNDLED_LINK_ARGS = NULL;
 const char* CHPL_TARGET_SYSTEM_LINK_ARGS = NULL;
 
+const char* CHPL_CUDA_LIBDEVICE_PATH = NULL;
+
 static char libraryFilename[FILENAME_MAX] = "";
 static char incFilename[FILENAME_MAX] = "";
 static bool fBaseline = false;
@@ -965,6 +967,7 @@ Flag types:
   U = unsigned long
   N = --no-... flag, --no version sets to false
   n = --no-... flag, --no version sets to true
+  X = hexadecimal (converted to unsigned long)
 
 Record components:
  {"long option" (or "" for separators), 'short option', "description of option argument(s), if any", "option description", "option type", &affectedVariable, "environment variable name", setter_function},
@@ -1215,7 +1218,7 @@ static ArgumentDescription arg_desc[] = {
 
  {"dyno", ' ', NULL, "Enable [disable] using dyno compiler library", "N", &fDynoCompilerLibrary, "CHPL_DYNO_COMPILER_LIBRARY", NULL},
  {"dyno-debug-trace", ' ', NULL, "Enable [disable] debug-trace output when using dyno compiler library", "N", &fDynoDebugTrace, "CHPL_DYNO_DEBUG_TRACE", NULL},
- {"dyno-break-on-hash", ' ' , NULL, "Break when query with given hash value is executed when using dyno compiler library", "U", &fDynoBreakOnHash, "CHPL_DYNO_BREAK_ON_HASH", NULL},
+ {"dyno-break-on-hash", ' ' , NULL, "Break when query with given hash value is executed when using dyno compiler library", "X", &fDynoBreakOnHash, "CHPL_DYNO_BREAK_ON_HASH", NULL},
 
 
  DRIVER_ARG_PRINT_CHPL_HOME,
@@ -1451,6 +1454,10 @@ static void setChapelEnvs() {
   CHPL_TARGET_SYSTEM_COMPILE_ARGS = envMap["CHPL_TARGET_SYSTEM_COMPILE_ARGS"];
   CHPL_TARGET_BUNDLED_LINK_ARGS = envMap["CHPL_TARGET_BUNDLED_LINK_ARGS"];
   CHPL_TARGET_SYSTEM_LINK_ARGS = envMap["CHPL_TARGET_SYSTEM_LINK_ARGS"];
+
+  if (localeUsesGPU()) {
+    CHPL_CUDA_LIBDEVICE_PATH = envMap["CHPL_CUDA_LIBDEVICE_PATH"];
+  }
 
   // Make sure there are no NULLs in envMap
   // a NULL in envMap might mean that one of the variables

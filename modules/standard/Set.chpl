@@ -148,9 +148,13 @@ module Set {
        than 50% full. The acceptable values for this argument are
        between 0 and 1, exclusive, meaning (0,1). This is useful
        when you would like to reduce memory impact or potentially
-       speed up how fast the map finds a slot.
+       speed up how fast the map finds a slot. To override the
+       default value of 0.5, the `defaultHashTableResizeThreshold`
+       config flag can be set at runtime. Note that this default
+       affects all hash-based data structures, including
+       associative domains and maps.
     */
-    const resizeThreshold = 0.5;
+    const resizeThreshold = defaultHashTableResizeThreshold;
 
     pragma "no doc"
     var _lock$ = if parSafe then new _LockWrapper() else none;
@@ -169,7 +173,8 @@ module Set {
                             map can hold at least this many values before
                             attempting to resize.
     */
-    proc init(type eltType, param parSafe=false, resizeThreshold=0.5,
+    proc init(type eltType, param parSafe=false,
+              resizeThreshold=defaultHashTableResizeThreshold,
               initialCapacity=16) {
       _checkElementType(eltType);
       this.eltType = eltType;
@@ -200,7 +205,8 @@ module Set {
                             attempting to resize.
     */
     proc init(type eltType, iterable, param parSafe=false,
-              resizeThreshold=0.5, initialCapacity=16)
+              resizeThreshold=defaultHashTableResizeThreshold,
+              initialCapacity=16)
     where canResolveMethod(iterable, "these") lifetime this < iterable {
       _checkElementType(eltType);
 
@@ -335,12 +341,6 @@ module Set {
       _addElem(element);
     }
 
-    pragma "last resort"
-    deprecated "The argument name `x` has been deprecated for function `add`, please use `element` instead"
-    proc ref add(in x: eltType) lifetime this < x {
-      add(element=x);
-    }
-
     /*
       Returns `true` if the given element is a member of this set, and `false`
       otherwise.
@@ -358,12 +358,6 @@ module Set {
       }
 
       return result;
-    }
-
-    pragma "last resort"
-    deprecated "The argument name `x` has been deprecated for function `contains, please use `element` instead"
-    proc const contains(const ref x: eltType): bool {
-      return contains(element=x);
     }
 
     /*
@@ -407,19 +401,6 @@ module Set {
     }
 
     /*
-      Returns `true` if this set and `other` have at least one element in
-      common, and `false` otherwise.
-
-      :arg other: The set to compare against.
-      :return: Whether or not this set and `other` intersect.
-      :rtype: `bool`
-    */
-    deprecated "Set isIntersecting() method is deprecated; use !:proc:`isDisjoint` instead"
-    proc const isIntersecting(const ref other: set(eltType, ?)): bool {
-      return !isDisjoint(other);
-    }
-
-    /*
       Attempt to remove the item from this set with a value equal to `element`.
       If an element equal to `element` was removed from this set, return `true`,
       else return `false` if no such value was found.
@@ -453,12 +434,6 @@ module Set {
       }
 
       return result;
-    }
-
-    pragma "last resort"
-    deprecated "The argument name `x` has been deprecated for function `remove`, please use `element` instead"
-    proc ref remove(const ref x: eltType): bool {
-      return remove(element=x);
     }
 
     /*

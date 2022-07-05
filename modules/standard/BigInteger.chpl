@@ -1172,28 +1172,36 @@ module BigInteger {
 
 
 
-  // Mod
+  /* Computes the mod operator on the two arguments, defined as
+     ``a % b = a - b * trunc(a / b)``.
+
+     The result is always >= 0 if `a` > 0.
+     It is an error if `b` == 0.
+  */
   operator bigint.%(const ref a: bigint, const ref b: bigint) {
     var c = new bigint();
 
     if _local {
-      mpz_mod(c.mpz, a.mpz,  b.mpz);
-
+      mpz_tdiv_r(c.mpz, a.mpz, b.mpz);
     } else if a.localeId == chpl_nodeID && b.localeId == chpl_nodeID {
-      mpz_mod(c.mpz, a.mpz,  b.mpz);
-
+      mpz_tdiv_r(c.mpz, a.mpz, b.mpz);
     } else {
       const a_ = a;
-
-      mpz_mod(c.mpz, a_.mpz, b.mpz);
+      mpz_tdiv_r(c.mpz, a_.mpz, b.mpz);
     }
 
     return c;
   }
 
+  /* Computes the mod operator on the two arguments, defined as
+     ``a % b = a - b * trunc(a / b)``.
+
+     The result is always >= 0 if `a` > 0.
+     It is an error if `b` == 0.
+  */
   operator bigint.%(const ref a: bigint, b: int) {
-    var b_ = 0 : c_ulong;
-    var c  = new bigint();
+    var c = new bigint();
+    var b_ : c_ulong;
 
     if b >= 0 then
       b_ = b.safeCast(c_ulong);
@@ -1201,34 +1209,37 @@ module BigInteger {
       b_ = (0 - b).safeCast(c_ulong);
 
     if _local {
-      mpz_mod_ui(c.mpz, a.mpz,  b_);
-
+      mpz_tdiv_r_ui(c.mpz, a.mpz, b_);
     } else if a.localeId == chpl_nodeID {
-      mpz_mod_ui(c.mpz, a.mpz,  b_);
-
+      mpz_tdiv_r_ui(c.mpz, a.mpz, b_);
     } else {
       const a_ = a;
-
-      mpz_mod_ui(c.mpz, a_.mpz, b_);
+      mpz_tdiv_r_ui(c.mpz, a_.mpz, b_);
     }
 
     return c;
   }
 
+  /* Computes the mod operator on the two arguments, defined as
+     ``a % b = a - b * trunc(a / b)``.
+
+     The result is always >= 0 if `a` > 0.
+     It is an error if `b` == 0.
+  */
   operator bigint.%(const ref a: bigint, b: uint) {
-    const b_ = b.safeCast(c_ulong);
     var   c  = new bigint();
+    const b_ = b.safeCast(c_ulong);
 
     if _local {
-      mpz_mod_ui(c.mpz, a.mpz,  b_);
+      mpz_tdiv_r_ui(c.mpz, a.mpz,  b_);
 
     } else if a.localeId == chpl_nodeID {
-      mpz_mod_ui(c.mpz, a.mpz,  b_);
+      mpz_tdiv_r_ui(c.mpz, a.mpz,  b_);
 
     } else {
       const a_ = a;
 
-      mpz_mod_ui(c.mpz, a_.mpz, b_);
+      mpz_tdiv_r_ui(c.mpz, a_.mpz, b_);
     }
 
     return c;
@@ -1961,13 +1972,20 @@ module BigInteger {
 
 
 
-  // %=
+  /* Mod ``a`` by ``b``, storing the result in ``a``.
+
+     Here, the modulo operation is defined as
+     ``a % b = a - b * trunc(a / b)``.
+
+     The result is always >= 0 if `a` > 0.
+     It is an error if `b` == 0.
+  */
   operator bigint.%=(ref a: bigint, const ref b: bigint) {
     if _local {
-      mpz_mod(a.mpz, a.mpz, b.mpz);
+      mpz_tdiv_r(a.mpz, a.mpz, b.mpz);
 
     } else if a.localeId == chpl_nodeID && b.localeId == chpl_nodeID {
-      mpz_mod(a.mpz, a.mpz, b.mpz);
+      mpz_tdiv_r(a.mpz, a.mpz, b.mpz);
 
     } else {
       const aLoc = chpl_buildLocaleID(a.localeId, c_sublocid_any);
@@ -1975,11 +1993,19 @@ module BigInteger {
       on __primitive("chpl_on_locale_num", aLoc) {
         const b_ = b;
 
-        mpz_mod(a.mpz, a.mpz, b_.mpz);
+        mpz_tdiv_r(a.mpz, a.mpz, b_.mpz);
       }
     }
   }
 
+  /* Mod ``a`` by ``b``, storing the result in ``a``.
+
+     Here, the modulo operation is defined as
+     ``a % b = a - b * trunc(a / b)``.
+
+     The result is always >= 0 if `a` > 0.
+     It is an error if `b` == 0.
+  */
   operator bigint.%=(ref a: bigint, b: int) {
     var b_ = 0 : uint;
 
@@ -1988,23 +2014,31 @@ module BigInteger {
     else
       b_ = (0 - b) : uint;
 
-      a %= b_;
+    a %= b_;
   }
 
+  /* Mod ``a`` by ``b``, storing the result in ``a``.
+
+     Here, the modulo operation is defined as
+     ``a % b = a - b * trunc(a / b)``.
+
+     The result is always >= 0 if `a` > 0.
+     It is an error if `b` == 0.
+  */
   operator bigint.%=(ref a: bigint, b: uint) {
     var b_ = b.safeCast(c_ulong);
 
     if _local {
-      mpz_mod_ui(a.mpz, a.mpz, b_);
+      mpz_tdiv_r_ui(a.mpz, a.mpz, b_);
 
     } else if a.localeId == chpl_nodeID {
-      mpz_mod_ui(a.mpz, a.mpz, b_);
+      mpz_tdiv_r_ui(a.mpz, a.mpz, b_);
 
     } else {
       const aLoc = chpl_buildLocaleID(a.localeId, c_sublocid_any);
 
       on __primitive("chpl_on_locale_num", aLoc) {
-        mpz_mod_ui(a.mpz, a.mpz, b_);
+        mpz_tdiv_r_ui(a.mpz, a.mpz, b_);
       }
     }
   }
@@ -3434,10 +3468,29 @@ module BigInteger {
     }
   }
 
+  /*
+   An `InversionError` is thrown if a :proc:`bigint.invert()` is attempted with
+   invalid arguments that result in a non-existant inverse. Specifically,
+   if the arguments cause a divide by zero, this error notifies the caller
+   that the internal value of the :record:`bigint` was left in an undefined state.
+   */
+  class InversionError : Error {
 
+    /* Create an :class:`InversionError` with the default error message: `Inverse does not exist` */
+    proc init() {
+      super.init("Inverse does not exist");
+    }
+  }
 
-  // invert
-  proc bigint.invert(const ref a: bigint, const ref b: bigint) : int {
+  /*
+  A parameter to select between the new and deprecated overloads of :proc:`bigint.invert()`
+  * `InvertReturnInt = true` causes the deprecated version of :proc:`bigint.invert()` to be called
+  * `InvertReturnInt = false` causes the new version of :proc:`bigint.invert()` to be called (this version does not return a status integer)
+  */
+  config param InvertReturnInt = true;
+
+  deprecated "The int-returning overload of bigint.invert() is deprecated - please use the non-returning version by setting `InvertReturnInt` to false"
+  proc bigint.invert(const ref a: bigint, const ref b: bigint) : int throws where InvertReturnInt == true {
     var ret: c_int;
 
     if _local {
@@ -3459,9 +3512,56 @@ module BigInteger {
       }
     }
 
-    return ret.safeCast(int);
+    var ret_int = ret.safeCast(int);
+
+    if (ret_int == 0) {
+      throw new owned InversionError();
+    } else {
+      return ret_int;
+    }
   }
 
+  /* Set the value of ``this`` to the inverse of ``a`` modulo ``b``
+
+     .. note::
+        If an inverse does not exist, an :class:`InversionError` will be thrown,
+        and the value of ``this`` will be left undefined
+
+     This fulfills the same role as the GMP number theoretic function ``mpz_invert``.
+
+     :arg a: The dividend of the modulo operation
+     :type a: :record:`bigint`
+
+     :arg b: The divisor of the modulo operation
+     :type b: :record:`bigint`
+
+  */
+  proc bigint.invert(const ref a: bigint, const ref b: bigint) throws where InvertReturnInt == false {
+    var ret: c_int;
+
+    if _local {
+      ret = mpz_invert(this.mpz, a.mpz, b.mpz);
+
+    } else if this.localeId == chpl_nodeID &&
+              a.localeId    == chpl_nodeID &&
+              b.localeId    == chpl_nodeID {
+      ret = mpz_invert(this.mpz, a.mpz, b.mpz);
+
+    } else {
+      const thisLoc = chpl_buildLocaleID(this.localeId, c_sublocid_any);
+
+      on __primitive("chpl_on_locale_num", thisLoc) {
+        var a_ = a;
+        var b_ = b;
+
+        ret = mpz_invert(this.mpz, a_.mpz, b_.mpz);
+      }
+    }
+
+    if (ret.safeCast(int) == 0) {
+      throw new owned InversionError();
+    }
+  }
 
   // remove
     /*
@@ -3873,9 +3973,48 @@ module BigInteger {
     return ret.safeCast(int);
   }
 
-
+  private proc fits_into(mpz: mpz_t, type t: integral): bool {
+    return
+      if t == c_long then
+        mpz_fits_slong_p(mpz) != 0
+      else if t == c_ulong then
+        mpz_fits_ulong_p(mpz) != 0
+      else if t == c_int then
+        mpz_fits_sint_p(mpz) != 0
+      else if t == c_uint then
+        mpz_fits_uint_p(mpz) != 0
+      else if t == c_short then
+        mpz_fits_sshort_p(mpz) != 0
+      else if t == c_ushort then
+        mpz_fits_ushort_p(mpz) != 0
+      else if t == c_schar then
+        mpz_cmp_si(mpz, -128) >= 0 && mpz_cmp_si(mpz, 127) <= 0
+      else if t == c_uchar then
+        mpz_cmp_ui(mpz, 0) >= 0 && mpz_cmp_ui(mpz, 255) <= 0
+      else
+        false;
+  }
 
   // Miscellaneous Functions
+  /* Test whether a :record:`bigint` will fit into
+    one of the standard integer types
+
+    :arg t: The Integral type to check against.
+    :type t: `integral`
+  */
+  proc bigint.fitsInto(type t: integral): bool {
+    if _local {
+      return fits_into(this.mpz, t);
+    } else if this.localeId == chpl_nodeID {
+      return fits_into(this.mpz, t);
+    } else {
+      var t_ = this;
+
+      return fits_into(t_.mpz, t);
+    }
+  }
+
+  deprecated "`fits_ulong_p` is deprecated -  please use `bigint.fitsInto(c_ulong)` instead"
   proc bigint.fits_ulong_p() : int {
     var ret: c_int;
 
@@ -3894,6 +4033,7 @@ module BigInteger {
     return ret.safeCast(int);
   }
 
+  deprecated "`fits_slong_p` is deprecated -  please use `bigint.fitsInto(c_long)` instead"
   proc bigint.fits_slong_p() : int {
     var ret: c_int;
 
@@ -3912,6 +4052,7 @@ module BigInteger {
     return ret.safeCast(int);
   }
 
+  deprecated "`fits_uint_p` is deprecated -  please use `bigint.fitsInto(c_uint)` instead"
   proc bigint.fits_uint_p() : int {
     var ret: c_int;
 
@@ -3930,6 +4071,7 @@ module BigInteger {
     return ret.safeCast(int);
   }
 
+  deprecated "`fits_sint_p` is deprecated -  please use `bigint.fitsInto(c_int)` instead"
   proc bigint.fits_sint_p() : int {
     var ret: c_int;
 
@@ -3948,6 +4090,7 @@ module BigInteger {
     return ret.safeCast(int);
   }
 
+  deprecated "`fits_ushort_p` is deprecated -  please use `bigint.fitsInto(c_ushort)` instead"
   proc bigint.fits_ushort_p() : int {
     var ret: c_int;
 
@@ -3966,6 +4109,7 @@ module BigInteger {
     return ret.safeCast(int);
   }
 
+  deprecated "`fits_sshort_p` is deprecated -  please use `bigint.fitsInto(c_short)` instead"
   proc bigint.fits_sshort_p() : int {
     var ret: c_int;
 
@@ -5053,15 +5197,23 @@ module BigInteger {
   }
 
 
+  /* Computes the mod operator on the two arguments, defined as
+     ``mod(a, b) = a - b * floor(a / b)``.
 
+     The result is stored in ``this``.
+
+     The result is always >= 0 if `b` > 0.
+     It is an error if `b` == 0.
+  */
   proc bigint.mod(const ref a: bigint, const ref b: bigint) {
     if _local {
-      mpz_mod(this.mpz, a.mpz, b.mpz);
+      mpz_fdiv_r(this.mpz, a.mpz, b.mpz);
 
     } else if this.localeId == chpl_nodeID &&
               a.localeId    == chpl_nodeID &&
               b.localeId    == chpl_nodeID {
-      mpz_mod(this.mpz, a.mpz, b.mpz);
+
+      mpz_fdiv_r(this.mpz, a.mpz, b.mpz);
 
     } else {
       const thisLoc = chpl_buildLocaleID(this.localeId, c_sublocid_any);
@@ -5070,40 +5222,69 @@ module BigInteger {
         const a_ = a;
         const b_ = b;
 
-        mpz_mod(this.mpz, a_.mpz, b_.mpz);
+        mpz_fdiv_r(this.mpz, a_.mpz, b_.mpz);
       }
     }
   }
 
-  proc bigint.mod(const ref a: bigint, b: integral) : uint {
-    var   b_ : c_ulong;
-    var   ret: c_ulong;
+  /* Computes the mod operator on the two arguments, defined as
+     ``mod(a, b) = a - b * floor(a / b)``.
 
-    if b >= 0 then
+     If b is of an unsigned type, then
+     fewer conditionals will be evaluated at run time.
+
+     The result is stored in ``this`` and returned as an ``int``.
+
+     The result is always >= 0 if `b` > 0.
+     It is an error if `b` == 0.
+  */
+  proc bigint.mod(const ref a: bigint, b: integral) : int {
+    var b_ : c_ulong;
+    var rem: c_ulong;
+
+    if isNonnegative(b) {
       b_ = b.safeCast(c_ulong);
-    else
-      b_ = (0 - b).safeCast(c_ulong);
 
-    if _local {
-      ret = mpz_mod_ui(this.mpz, a.mpz, b_);
-
-    } else if this.localeId == chpl_nodeID && a.localeId == chpl_nodeID {
-      ret = mpz_mod_ui(this.mpz, a.mpz, b_);
-
-    } else {
-      const thisLoc = chpl_buildLocaleID(this.localeId, c_sublocid_any);
-
-      on __primitive("chpl_on_locale_num", thisLoc) {
-        const a_ = a;
-
-        ret = mpz_mod_ui(this.mpz, a_.mpz, b_);
+      if _local {
+        rem = mpz_fdiv_r_ui(this.mpz, a.mpz, b_);
+      } else if this.localeId == chpl_nodeID && a.localeId == chpl_nodeID {
+        rem = mpz_fdiv_r_ui(this.mpz, a.mpz, b_);
+      } else {
+        const thisLoc = chpl_buildLocaleID(this.localeId, c_sublocid_any);
+        on __primitive("chpl_on_locale_num", thisLoc) {
+          const a_ = a;
+          rem = mpz_fdiv_r_ui(this.mpz, a_.mpz, b_);
+        }
       }
+
+      return rem.safeCast(int);
+    } else {
+      if b >= 0 then
+        b_ = b.safeCast(c_ulong);
+      else
+        b_ = (0 - b).safeCast(c_ulong);
+
+      if _local {
+        rem = mpz_fdiv_r_ui(this.mpz, a.mpz, b_);
+      } else if this.localeId == chpl_nodeID && a.localeId == chpl_nodeID {
+        rem = mpz_fdiv_r_ui(this.mpz, a.mpz, b_);
+      } else {
+        const thisLoc = chpl_buildLocaleID(this.localeId, c_sublocid_any);
+        on __primitive("chpl_on_locale_num", thisLoc) {
+          const a_ = a;
+          rem = mpz_fdiv_r_ui(this.mpz, a_.mpz, b_);
+        }
+      }
+
+      if rem == 0
+        then return 0;
+      else if b < 0 {
+        this += b;
+        return rem.safeCast(int) + b;
+      } else
+        return rem.safeCast(int);
     }
-
-    return ret.safeCast(uint);
   }
-
-
 
   // Comparison Functions
   proc bigint.cmp(const ref b: bigint) : int {

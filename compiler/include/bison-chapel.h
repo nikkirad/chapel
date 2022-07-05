@@ -144,8 +144,13 @@ extern int yydebug;
     WhereAndLifetime          lifetimeAndWhere;
   };
 
+  // Communicate to Bison that our YYSTYPE only contains simple scalars
+  // and can be bitcopied. We do this because we do not use the '%union'
+  // directive.
+  #define YYSTYPE_IS_TRIVIAL 1
+
   #endif
-#line 152 "chapel.ypp"
+#line 157 "chapel.ypp"
 
   #ifndef _BISON_CHAPEL_DEFINES_2_
   #define _BISON_CHAPEL_DEFINES_2_
@@ -163,7 +168,7 @@ extern int yydebug;
   #define YYLTYPE_IS_TRIVIAL  1
 
   #endif
-#line 175 "chapel.ypp"
+#line 180 "chapel.ypp"
 
   #ifndef _BISON_CHAPEL_DEFINES_3_
   #define _BISON_CHAPEL_DEFINES_3_
@@ -191,7 +196,11 @@ extern int yydebug;
 
   #endif
 
+<<<<<<< HEAD
 #line 195 "../include/bison-chapel.h"
+=======
+#line 200 "../include/bison-chapel.h"
+>>>>>>> upstream/main
 
 /* Token kinds.  */
 #ifndef YYTOKENTYPE
@@ -418,7 +427,7 @@ yypstate *yypstate_new (void);
 void yypstate_delete (yypstate *ps);
 
 /* "%code provides" blocks.  */
-#line 206 "chapel.ypp"
+#line 211 "chapel.ypp"
 
   extern int yydebug;
 
@@ -426,6 +435,10 @@ void yypstate_delete (yypstate *ps);
                ParserContext* context,
                const char*    str);
 
+<<<<<<< HEAD
 #line 430 "../include/bison-chapel.h"
+=======
+#line 435 "../include/bison-chapel.h"
+>>>>>>> upstream/main
 
 #endif /* !YY_YY_INCLUDE_BISON_CHAPEL_H_INCLUDED  */

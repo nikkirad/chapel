@@ -37,7 +37,7 @@ using namespace types;
 using namespace uast;
 
 // error handler that causes the test to fail if it runs
-static void reportError(const ErrorMessage& err) {
+static void reportError(Context* context, const ErrorMessage& err) {
   printf("error encountered - %s\n", err.message().c_str());
   assert(false && "fatal error");
 }
@@ -47,7 +47,7 @@ static const Module* parseModule(Context* context, const char* src) {
   std::string contents = src;
   setFileText(context, path, contents);
 
-  const ModuleVec& vec = parse(context, path);
+  const ModuleVec& vec = parseToplevel(context, path);
   assert(vec.size() == 1);
 
   return vec[0];
@@ -125,12 +125,40 @@ static void test4() {
   assert(qt.type() == BoolType::get(context, 0));
 }
 
+static void test5() {
+  Context ctx;
+  Context* context = &ctx;
+
+  // configure context to fail test if there are any errors
+  context->setErrorHandler(reportError);
+
+  // both args are params, should make a param init expr
+  QualifiedType qt = parseTypeOfXInit(context,
+                                      "var x = true && false;");
+  assert(qt.isParamFalse());
+}
+
+static void test6() {
+  Context ctx;
+  Context* context = &ctx;
+
+  // configure context to fail test if there are any errors
+  context->setErrorHandler(reportError);
+
+  // both args are params, should make a param init expr
+  QualifiedType qt = parseTypeOfXInit(context,
+                                      "var x = false || true;");
+  assert(qt.isParamTrue());
+}
+
+
 int main() {
   test1();
   test2();
   test3();
   test4();
+  test5();
+  test6();
 
   return 0;
 }
-

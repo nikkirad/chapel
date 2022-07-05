@@ -523,6 +523,6 @@ extern int yylex \
 #line 337 "chapel.lex"
 
 
-#line 526 "../include/flex-chapel.h"
+#line 525 "../include/flex-chapel.h"
 #undef yyIN_HEADER
 #endif /* yyHEADER_H */

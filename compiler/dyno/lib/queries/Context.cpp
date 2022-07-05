@@ -64,11 +64,13 @@ namespace chpl {
 
 using namespace chpl::querydetail;
 
-static void defaultReportErrorPrintDetail(const ErrorMessage& err,
+static void defaultReportErrorPrintDetail(Context* context,
+                                          const ErrorMessage& err,
                                           const char* prefix,
                                           const char* kind) {
-  const char* path = err.path().c_str();
-  int lineno = err.line();
+  Location loc = err.location(context);
+  const char* path = loc.path().c_str();
+  int lineno = loc.line();
   bool validPath = (path != nullptr && path[0] != '\0');
 
   if (validPath && lineno > 0) {
@@ -83,12 +85,28 @@ static void defaultReportErrorPrintDetail(const ErrorMessage& err,
   }
 
   for (const auto& detail : err.details()) {
-    defaultReportErrorPrintDetail(detail, "  ", "note");
+    defaultReportErrorPrintDetail(context, detail, "  ", "note");
   }
 }
 
-void Context::defaultReportError(const ErrorMessage& err) {
-  defaultReportErrorPrintDetail(err, "", "error");
+void Context::defaultReportError(Context* context, const ErrorMessage& err) {
+  // if the err came with a kind, use it, otherwise just call it an "error"
+  std::string errKindString;
+  switch (err.kind()) {
+    case ErrorMessage::Kind::WARNING:
+      errKindString = "warning";
+      break;
+    case ErrorMessage::Kind::NOTE:
+      errKindString = "note";
+      break;
+    case ErrorMessage::Kind::SYNTAX:
+      errKindString = "syntax";
+      break;
+    default:
+      errKindString = "error";
+  }
+
+  defaultReportErrorPrintDetail(context, err, "", errKindString.c_str());
 }
 
 // unique'd strings are preceded by 4 bytes of length, gcMark and doNotCollectMark
@@ -394,30 +412,9 @@ const UniqueString& filePathForModuleIdSymbolPathQuery(Context* context,
   return QUERY_END(result);
 }
 
-static UniqueString removeLastSymbolPathComponent(Context* context,
-                                                  UniqueString str) {
-
-  // If the symbol path is empty, return an empty string
-  if (str.isEmpty()) {
-    UniqueString empty;
-    return empty;
-  }
-
-  // Otherwise, remove the last path component
-  const char* s = str.c_str();
-  int len = strlen(s);
-  int lastDot = 0;
-  for (int i = len-1; i >= 0; i--) {
-    if (s[i] == '.') {
-      lastDot = i;
-      break;
-    }
-  }
-
-  return UniqueString::get(context, s, lastDot);
-}
-
-UniqueString Context::filePathForId(ID id) {
+bool Context::filePathForId(ID id,
+                            UniqueString& pathOut,
+                            UniqueString& parentSymbolPathOut) {
   UniqueString symbolPath = id.symbolPath();
 
   while (!symbolPath.isEmpty()) {
@@ -427,39 +424,21 @@ UniqueString Context::filePathForId(ID id) {
                                         tupleOfArgs);
 
     if (got) {
-      const UniqueString& p =
-        filePathForModuleIdSymbolPathQuery(this, symbolPath);
-      return p;
-    }
-
-    // remove the last path component, e.g. M.N -> M
-    symbolPath = removeLastSymbolPathComponent(this, symbolPath);
-  }
-
-  return UniqueString::get(this, "<unknown file path>");
-}
-
-bool Context::hasFilePathForId(ID id) {
-  UniqueString symbolPath = id.symbolPath();
-
-  while (!symbolPath.isEmpty()) {
-    auto tupleOfArgs = std::make_tuple(symbolPath);
-
-    bool got = hasCurrentResultForQuery(filePathForModuleIdSymbolPathQuery,
-                                        tupleOfArgs);
-
-    if (got) {
+      pathOut = filePathForModuleIdSymbolPathQuery(this, symbolPath);
+      parentSymbolPathOut = ID::parentSymbolPath(this, symbolPath);
       return true;
     }
 
     // remove the last path component, e.g. M.N -> M
-    symbolPath = removeLastSymbolPathComponent(this, symbolPath);
+    symbolPath = ID::parentSymbolPath(this, symbolPath);
   }
 
+  pathOut = UniqueString::get(this, "<unknown file path>");
+  parentSymbolPathOut = UniqueString();
   return false;
 }
 
-void Context::setFilePathForModuleID(ID moduleID, UniqueString path) {
+void Context::setFilePathForModuleId(ID moduleID, UniqueString path) {
   UniqueString moduleIdSymbolPath = moduleID.symbolPath();
   auto tupleOfArgs = std::make_tuple(moduleIdSymbolPath);
 
@@ -470,10 +449,15 @@ void Context::setFilePathForModuleID(ID moduleID, UniqueString path) {
                        /* forSetter */ true);
 
   if (enableDebugTrace) {
-    printf("SETTING FILE PATH FOR MODULE %s -> %s\n",
+    printf("%i SETTING FILE PATH FOR MODULE %s -> %s\n", queryTraceDepth,
            moduleIdSymbolPath.c_str(), path.c_str());
   }
-  assert(hasFilePathForId(moduleID));
+  #ifndef NDEBUG
+    UniqueString gotPath;
+    UniqueString gotParentSymbolPath;
+    bool ok = filePathForId(moduleID, gotPath, gotParentSymbolPath);
+    assert(ok && path == gotPath);
+  #endif
 }
 
 void Context::advanceToNextRevision(bool prepareToGC) {
@@ -487,7 +471,7 @@ void Context::advanceToNextRevision(bool prepareToGC) {
     gcCounter++;
   }
   if (enableDebugTrace) {
-    printf("CURRENT REVISION NUMBER IS NOW %i %s\n",
+    printf("%i CURRENT REVISION NUMBER IS NOW %i %s\n", queryTraceDepth,
            (int) this->currentRevisionNumber,
            prepareToGC?"PREPARING GC":"");
   }
@@ -507,7 +491,7 @@ void Context::collectGarbage() {
   assert(queryStack.size() == 0);
 
   if (enableDebugTrace) {
-    printf("COLLECTING GARBAGE\n");
+    printf("%i COLLECTING GARBAGE\n", queryTraceDepth);
   }
 
   // clear out the saved old results
@@ -538,12 +522,12 @@ void Context::collectGarbage() {
       if (buf[1] || buf[0] == gcMark) {
         newTable.insert(e);
         if (enableDebugTrace) {
-          printf("COPYING OVER UNIQUESTRING %s\n", key);
+          printf("%i COPYING OVER UNIQUESTRING %s\n", queryTraceDepth, key);
         }
       } else {
         toFree.push_back(allocation);
         if (enableDebugTrace) {
-          printf("WILL FREE UNIQUESTRING %s\n", key);
+          printf("%i WILL FREE UNIQUESTRING %s\n", queryTraceDepth, key);
         }
       }
     }
@@ -554,7 +538,7 @@ void Context::collectGarbage() {
 
     if (enableDebugTrace) {
       size_t nUniqueStringsAfter = uniqueStringsTable.size();
-      printf("COLLECTED %i UniqueStrings\n",
+      printf("%i COLLECTED %i UniqueStrings\n", queryTraceDepth,
              (int)(nUniqueStringsBefore-nUniqueStringsAfter));
     }
   }
@@ -563,68 +547,64 @@ void Context::collectGarbage() {
 void Context::report(ErrorMessage error) {
   if (queryStack.size() > 0) {
     queryStack.back()->errors.push_back(std::move(error));
-    reportError(queryStack.back()->errors.back());
+    reportError(this, queryStack.back()->errors.back());
   } else {
-    reportError(error);
+    reportError(this, error);
   }
 }
 
-static void logErrorInContext(Context* context, Location loc,
+static void logErrorInContext(Context* context,
                               ErrorMessage::Kind kind,
+                              Location loc,
                               const char* fmt,
                               va_list vl) {
-  ID id;
-  ErrorMessage err;
-  err = ErrorMessage::vbuild(id, loc, kind, fmt, vl);
-  context->report(err);
-}
-
-static void logErrorInContext(Context* context, ID id,
-                              ErrorMessage::Kind kind,
-                              const char* fmt,
-                              va_list vl) {
-  Location loc = parsing::locateId(context, id);
-  ErrorMessage err;
-  err = ErrorMessage::vbuild(id, loc, ErrorMessage::ERROR, fmt, vl);
-  context->report(err);
+  auto err = ErrorMessage::vbuild(kind, loc, fmt, vl);
+  context->report(std::move(err));
 }
 
 static void logErrorInContext(Context* context,
-                              const uast::AstNode* ast,
                               ErrorMessage::Kind kind,
+                              ID id,
                               const char* fmt,
                               va_list vl) {
-  Location loc = parsing::locateAst(context, ast);
-  ErrorMessage err;
-  err = ErrorMessage::vbuild(ast->id(), loc, ErrorMessage::ERROR, fmt, vl);
-  context->report(err);
+  auto err = ErrorMessage::vbuild(kind, id, fmt, vl);
+  context->report(std::move(err));
 }
 
-#define CHPL_CONTEXT_LOG_ERROR_HELPER(context__, pin__, kind__, fmt__) \
+static void logErrorInContext(Context* context,
+                              ErrorMessage::Kind kind,
+                              const uast::AstNode* ast,
+                              const char* fmt,
+                              va_list vl) {
+  auto err = ErrorMessage::vbuild(kind, ast->id(), fmt, vl);
+  context->report(std::move(err));
+}
+
+#define CHPL_CONTEXT_LOG_ERROR_HELPER(context__, kind__, pin__, fmt__) \
   do { \
     va_list vl; \
     va_start(vl, fmt__); \
-    logErrorInContext(context__, pin__, kind__, fmt__, vl); \
+    logErrorInContext(context__, kind__, pin__, fmt__, vl); \
     va_end(vl); \
   } while (0)
 
 // TODO: Similar overloads for NOTE, WARN, etc.
 void Context::error(Location loc, const char* fmt, ...) {
-  CHPL_CONTEXT_LOG_ERROR_HELPER(this, loc, ErrorMessage::ERROR, fmt);
+  CHPL_CONTEXT_LOG_ERROR_HELPER(this, ErrorMessage::ERROR, loc, fmt);
 }
 
 void Context::error(ID id, const char* fmt, ...) {
-  CHPL_CONTEXT_LOG_ERROR_HELPER(this, id, ErrorMessage::ERROR, fmt);
+  CHPL_CONTEXT_LOG_ERROR_HELPER(this, ErrorMessage::ERROR, id, fmt);
 }
 
 void Context::error(const uast::AstNode* ast, const char* fmt, ...) {
-  CHPL_CONTEXT_LOG_ERROR_HELPER(this, ast, ErrorMessage::ERROR, fmt);
+  CHPL_CONTEXT_LOG_ERROR_HELPER(this, ErrorMessage::ERROR, ast, fmt);
 }
 
 void Context::error(const resolution::TypedFnSignature* inFn,
                     const uast::AstNode* ast,
                     const char* fmt, ...) {
-  CHPL_CONTEXT_LOG_ERROR_HELPER(this, ast, ErrorMessage::ERROR, fmt);
+  CHPL_CONTEXT_LOG_ERROR_HELPER(this, ErrorMessage::ERROR, ast, fmt);
   // TODO: add note about instantiation & POI stack
 }
 
@@ -676,14 +656,16 @@ void Context::recomputeIfNeeded(const QueryMapResultBase* resultEntry) {
     resultEntry->recompute(this);
     assert(resultEntry->lastChecked == this->currentRevisionNumber);
     if (enableDebugTrace) {
-      printf("DONE RECOMPUTING IF NEEDED -- RECOMPUTED FOR %s\n",
+      printf("%i DONE RECOMPUTING IF NEEDED -- RECOMPUTED FOR %s\n",
+             queryTraceDepth,
              resultEntry->parentQueryMap->queryName);
     }
     return;
   } else {
     updateForReuse(resultEntry);
     if (enableDebugTrace) {
-      printf("DONE RECOMPUTING IF NEEDED -- REUSED FOR %s\n",
+      printf("%i DONE RECOMPUTING IF NEEDED -- REUSED FOR %s\n",
+             queryTraceDepth,
              resultEntry->parentQueryMap->queryName);
     }
   }
@@ -706,8 +688,7 @@ void Context::updateForReuse(const QueryMapResultBase* resultEntry) {
 
   // Update error locations if needed and re-report the error
   for (auto& err: resultEntry->errors) {
-    err.updateLocation(this);
-    reportError(err);
+    reportError(this, err);
   }
 }
 

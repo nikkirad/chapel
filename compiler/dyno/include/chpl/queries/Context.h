@@ -27,6 +27,7 @@
 #include "chpl/util/memory.h"
 #include "chpl/util/hash.h"
 #include "chpl/util/break.h"
+#include "chpl/util/terminal.h"
 
 #include <memory>
 #include <tuple>
@@ -63,6 +64,9 @@ implement queries and how the query framework functions.
 
  */
 class Context {
+ public:
+  using ReportErrorFnType = void(*)(Context*, const ErrorMessage&);
+
  private:
   // map that supports uniqueCString / UniqueString
   using UniqueStringsTableType = std::unordered_set<chpl::detail::StringAndLength, chpl::detail::UniqueStrHash, chpl::detail::UniqueStrEqual>;
@@ -99,14 +103,37 @@ class Context {
   bool enableDebugTrace = false;
   bool enableQueryTiming = false;
   bool enableQueryTimingTrace = false;
+  bool currentTerminalSupportsColor_ = terminalSupportsColor(getenv("TERM"));
   bool breakSet = false;
   size_t breakOnHash = 0;
   int numQueriesRunThisRevision_ = 0;
+  // tracks the nesting of queries, displayed during query tracing
+  int queryTraceDepth = 0;
+
+  // list of query names to ignore when tracing
+  const std::vector<std::string>
+  queryTraceIgnoreQueries = {"idToTagQuery", "idToParentId"};
+
+  // list of colors to use for open/close braces depending on query depth
+  const std::vector<TermColorName>
+  queryDepthColor  = {BLUE, BRIGHT_YELLOW, MAGENTA};
 
   owned<std::ostream> queryTimingTraceOutput = nullptr;
 
-  static void defaultReportError(const ErrorMessage& err);
-  void (*reportError)(const ErrorMessage& err) = defaultReportError;
+  static void defaultReportError(Context* context, const ErrorMessage& err);
+  ReportErrorFnType reportError = defaultReportError;
+  // return an ANSI color code for this query depth, if supported by terminal
+  void setQueryDepthColor(int depth, std::ostream& os) {
+    auto color = queryDepthColor[depth % queryDepthColor.size()];
+    setTerminalColor(color, os);
+  }
+
+  void setTerminalColor(TermColorName colorName, std::ostream& os) {
+    if (currentTerminalSupportsColor_) {
+      os << getColorFormat(colorName);
+    }
+  }
+
 
   // The following are only used for UniqueString garbage collection
   querydetail::RevisionNumber lastPrepareToGCRevisionNumber = 0;
@@ -223,8 +250,7 @@ class Context {
   /**
    Set the error handling function
    */
-  void setErrorHandler(void (*reportError)(const ErrorMessage& err))
-  {
+  void setErrorHandler(ReportErrorFnType reportError) {
     this->reportError = reportError;
   }
 
@@ -356,21 +382,23 @@ class Context {
 
 
   /**
-    Return the file path for the file containing this ID.
-   */
-  UniqueString filePathForId(ID id);
+    Return 'true' if the filePathForId was found
+    (which can only happen because setFilePathForModuleID was already
+     called for this ID).
 
-  /**
-    Returns true if filePathForId is already populated for
-    this ID.
+    Returns the path by setting 'pathOut'.
+    Returns the parent symbol path (relevant for 'module include'
+    by setting 'parentSymbolPathOut'.
    */
-  bool hasFilePathForId(ID id);
+  bool filePathForId(ID id,
+                     UniqueString& pathOut,
+                     UniqueString& parentSymbolPathOut);
 
   /**
     Sets the file path for the given module ID. This
     is suitable to call from a parse query.
    */
-  void setFilePathForModuleID(ID moduleID, UniqueString path);
+  void setFilePathForModuleId(ID moduleID, UniqueString path);
 
   /**
     This function increments the current revision number stored
