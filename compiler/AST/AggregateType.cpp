@@ -2095,6 +2095,12 @@ void AggregateType::printDocs(std::ostream *file, unsigned int tabs) {
                                this->symbol->getDeprecationMsg(),
                                !fDocsTextOnly);
   }
+
+  if (this->symbol->hasFlag(FLAG_UNSTABLE)) {
+    this->printDocsUnstable(this->doc, file, tabs + 1,
+                            this->symbol->getUnstableMsg(),
+                            !fDocsTextOnly);
+  }
 }
 
 
@@ -3026,6 +3032,7 @@ Type* AggregateType::getDecoratedClass(ClassTypeDecoratorEnum d) {
     // The dec type isn't really an object, shouldn't have its own fields
     tsDec->copyFlags(at->symbol);
     tsDec->deprecationMsg = at->symbol->deprecationMsg;
+    tsDec->unstableMsg = at->symbol->unstableMsg;
     tsDec->addFlag(FLAG_NO_OBJECT);
     // Propagate generic-ness to the decorated type
     if (at->isGeneric() || at->symbol->hasFlag(FLAG_GENERIC))

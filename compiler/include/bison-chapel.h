@@ -196,11 +196,7 @@ extern int yydebug;
 
   #endif
 
-<<<<<<< HEAD
-#line 195 "../include/bison-chapel.h"
-=======
 #line 200 "../include/bison-chapel.h"
->>>>>>> upstream/main
 
 /* Token kinds.  */
 #ifndef YYTOKENTYPE
@@ -435,10 +431,6 @@ void yypstate_delete (yypstate *ps);
                ParserContext* context,
                const char*    str);
 
-<<<<<<< HEAD
-#line 430 "../include/bison-chapel.h"
-=======
 #line 435 "../include/bison-chapel.h"
->>>>>>> upstream/main
 
 #endif /* !YY_YY_INCLUDE_BISON_CHAPEL_H_INCLUDED  */
