@@ -829,7 +829,7 @@ SymAndReferencedName ResolveScope::lookupForImport(Expr* expr,
       outerMod->generateDeprecationWarning(call);
     }
 
-    if (outerMod->hasFlag(FLAG_UNSTABLE)) {
+    if (outerMod->hasFlag(FLAG_UNSTABLE) && (fWarnUnstable)) {
       outerMod->generateUnstableWarning(call);
     }
     

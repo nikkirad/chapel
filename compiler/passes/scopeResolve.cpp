@@ -910,7 +910,7 @@ static void resolveUnresolvedSymExpr(UnresolvedSymExpr* usymExpr,
       sym->generateDeprecationWarning(usymExpr);
     }
 
-    if (sym->hasFlag(FLAG_UNSTABLE)) {
+    if ((sym->hasFlag(FLAG_UNSTABLE)) && (fWarnUnstable)) {
       sym->generateUnstableWarning(usymExpr);
     }
 
@@ -1462,7 +1462,7 @@ static void resolveModuleCall(CallExpr* call) {
               sym->generateDeprecationWarning(call);
             }
 
-            if (sym->hasFlag(FLAG_UNSTABLE) && (!isFnSymbol(sym))) {
+            if (sym->hasFlag(FLAG_UNSTABLE) && (!isFnSymbol(sym)) && (fWarnUnstable)) {
               sym->generateUnstableWarning(call);
             }
 
@@ -1596,7 +1596,7 @@ static void resolveEnumeratedTypes() {
                   constant->sym->generateDeprecationWarning(call);
                 }
 
-                if (constant->sym->hasFlag(FLAG_UNSTABLE)) {
+                if (constant->sym->hasFlag(FLAG_UNSTABLE) && (fWarnUnstable)) {
                   constant->sym->generateUnstableWarning(call);
                 }
 
