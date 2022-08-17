@@ -488,6 +488,10 @@
 %type <commentsAndStmt> deprecated_class_level_stmt
 
 %type <commentsAndStmt> unstable_decl_stmt
+<<<<<<< HEAD
+=======
+%type <commentsAndStmt> unstable_decl_base
+>>>>>>> 13ab79872a (Updated parser to recognize unstable)
 %type <commentsAndStmt> unstable_enum_item
 %type <commentsAndStmt> unstable_class_level_stmt
 
@@ -847,11 +851,20 @@ decl_base:
 ;
 
 unstable_decl_stmt:
+<<<<<<< HEAD
   TUNSTABLE STRINGLITERAL
   {
     context->noteUnstable(@$, $2);
   }
   decl_base
+=======
+  unstable_decl_base
+| TUNSTABLE STRINGLITERAL
+  {
+    context->noteUnstable(@$, $2);
+  }
+  unstable_decl_base
+>>>>>>> 13ab79872a (Updated parser to recognize unstable)
   {
     $$ = $4;
   }
@@ -859,12 +872,24 @@ unstable_decl_stmt:
   {
     context->noteUnstable(@$, nullptr);
   }
+<<<<<<< HEAD
   decl_base
+=======
+  unstable_decl_base
+>>>>>>> 13ab79872a (Updated parser to recognize unstable)
   {
     $$ = $3;
   }
 ;
 
+<<<<<<< HEAD
+=======
+unstable_decl_base:
+  module_decl_stmt
+| class_level_stmt
+;
+
+>>>>>>> 13ab79872a (Updated parser to recognize unstable)
 module_decl_start:
   opt_access_control opt_prototype TMODULE ident_def
     {
@@ -1358,7 +1383,12 @@ deprecated_class_level_stmt:
 ;
 
 unstable_class_level_stmt:
+<<<<<<< HEAD
   TUNSTABLE STRINGLITERAL
+=======
+  class_level_stmt
+| TUNSTABLE STRINGLITERAL
+>>>>>>> 13ab79872a (Updated parser to recognize unstable)
   {
     context->noteUnstable(@$, $2);
   }
@@ -2154,7 +2184,11 @@ enum_ls:
     context->appendList($1, $4);
     context->resetAttributePartsState();
   }
+<<<<<<< HEAD
 |
+=======
+
+>>>>>>> 13ab79872a (Updated parser to recognize unstable)
   unstable_enum_item
   {
     $$ = context->makeList($1);
@@ -2162,6 +2196,15 @@ enum_ls:
   }
 | enum_ls TCOMMA
   {
+<<<<<<< HEAD
+=======
+    $$ = $1;
+    context->clearCommentsBefore(@2);
+    context->resetAttributePartsState();
+  }
+| enum_ls TCOMMA
+  {
+>>>>>>> 13ab79872a (Updated parser to recognize unstable)
     context->clearCommentsBefore(@2);
     context->resetAttributePartsState();
   }
@@ -2194,12 +2237,21 @@ deprecated_enum_item:
 ;
 
 unstable_enum_item:
+<<<<<<< HEAD
   TUNSTABLE STRINGLITERAL
   {
     context->noteUnstable(@$, $2);
   }
   enum_item
   {
+=======
+  enum_item
+| TUNSTABLE STRINGLITERAL
+  {
+    context->noteUnstable(@$, $2);
+  }
+  enum_item{
+>>>>>>> 13ab79872a (Updated parser to recognize unstable)
     $$ = $4;
   }
 | TUNSTABLE
